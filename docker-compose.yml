@@ -1,0 +1,175 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: airflow-db
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7.2-bookworm
+    container_name: airflow-redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  airflow-init:
+    image: apache/airflow:2.9.3
+    container_name: airflow-init
+    command: bash -c "airflow db init && airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./reports:/opt/airflow/reports
+    depends_on:
+      - postgres
+      - redis
+
+  airflow-web:
+    image: apache/airflow:2.9.3
+    container_name: airflow-web
+    command: webserver
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CORE__FERNET_KEY: ""
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: airflow
+      AIRFLOW__WEBSERVER__ENABLE_CORS: "True"
+      AIRFLOW__WEBSERVER__CORS_ORIGINS: "http://localhost:5173"
+
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./reports:/opt/airflow/reports
+      - ./webserver_config.py:/opt/airflow/webserver_config.py
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+      - airflow-init
+    restart: always
+
+  airflow-scheduler:
+    image: apache/airflow:2.9.3
+    container_name: airflow-scheduler
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./reports:/opt/airflow/reports
+    depends_on:
+      - postgres
+      - redis
+      - airflow-init
+    restart: always
+
+  airflow-worker:
+    image: apache/airflow:2.9.3
+    container_name: airflow-worker
+    command: celery worker
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./reports:/opt/airflow/reports
+    depends_on:
+      - postgres
+      - redis
+      - airflow-init
+    restart: always
+
+  airflow-triggerer:
+    image: apache/airflow:2.9.3
+    container_name: airflow-triggerer
+    command: triggerer
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./reports:/opt/airflow/reports
+    depends_on:
+      - postgres
+      - redis
+      - airflow-init
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+    container_name: validation-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./reports:/opt/airflow/reports
+    depends_on:
+      - validation-db
+    restart: no
+
+  validation-db:
+    image: postgres:13
+    container_name: validation-db
+    environment:
+      POSTGRES_USER: val_user
+      POSTGRES_PASSWORD: val_pass
+      POSTGRES_DB: validation_results
+    ports:
+      - "5433:5432"
+    volumes:
+      - validation-data:/var/lib/postgresql/data
+      - ./sql/init_validation_db.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: validation-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - validation-db
+    restart: always
+
+volumes:
+  postgres-db-volume:
+  validation-data:

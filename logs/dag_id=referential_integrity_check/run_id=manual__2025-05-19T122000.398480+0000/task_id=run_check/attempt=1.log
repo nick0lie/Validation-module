@@ -1,0 +1,40 @@
+[2025-05-19T12:20:02.636+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-05-19T12:20:02.654+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: referential_integrity_check.run_check manual__2025-05-19T12:20:00.398480+00:00 [queued]>
+[2025-05-19T12:20:02.661+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: referential_integrity_check.run_check manual__2025-05-19T12:20:00.398480+00:00 [queued]>
+[2025-05-19T12:20:02.662+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-05-19T12:20:02.675+0000] {taskinstance.py:2330} INFO - Executing <Task(PythonOperator): run_check> on 2025-05-19 12:20:00.398480+00:00
+[2025-05-19T12:20:02.680+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62: DeprecationWarning: This process (pid=52) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-05-19T12:20:02.682+0000] {standard_task_runner.py:64} INFO - Started process 56 to run task
+[2025-05-19T12:20:02.682+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'referential_integrity_check', 'run_check', 'manual__2025-05-19T12:20:00.398480+00:00', '--job-id', '78', '--raw', '--subdir', 'DAGS_FOLDER/referential_integrity_check.py', '--cfg-path', '/tmp/tmpj3p4u7n6']
+[2025-05-19T12:20:02.684+0000] {standard_task_runner.py:91} INFO - Job 78: Subtask run_check
+[2025-05-19T12:20:02.725+0000] {task_command.py:426} INFO - Running <TaskInstance: referential_integrity_check.run_check manual__2025-05-19T12:20:00.398480+00:00 [running]> on host af516117b735
+[2025-05-19T12:20:02.798+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='referential_integrity_check' AIRFLOW_CTX_TASK_ID='run_check' AIRFLOW_CTX_EXECUTION_DATE='2025-05-19T12:20:00.398480+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-05-19T12:20:00.398480+00:00'
+[2025-05-19T12:20:02.799+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-05-19T12:20:02.826+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-05-19T12:20:02.826+0000] {taskinstance.py:2905} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 465, in _execute_task
+    result = _execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 432, in _execute_callable
+    return execute_callable(context=context, **execute_callable_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/baseoperator.py", line 401, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/python.py", line 235, in execute
+    return_value = self.execute_callable()
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/python.py", line 252, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/referential_integrity_check.py", line 18, in run_referential_check
+    raise ValueError("Параметр 'db_url' обязателен")
+ValueError: Параметр 'db_url' обязателен
+[2025-05-19T12:20:02.836+0000] {taskinstance.py:1206} INFO - Marking task as FAILED. dag_id=referential_integrity_check, task_id=run_check, run_id=manual__2025-05-19T12:20:00.398480+00:00, execution_date=20250519T122000, start_date=20250519T122002, end_date=20250519T122002
+[2025-05-19T12:20:02.850+0000] {standard_task_runner.py:110} ERROR - Failed to execute job 78 for task run_check (Параметр 'db_url' обязателен; 56)
+[2025-05-19T12:20:02.856+0000] {local_task_job_runner.py:243} INFO - Task exited with return code 1
+[2025-05-19T12:20:02.868+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-05-19T12:20:02.874+0000] {local_task_job_runner.py:222} INFO - ::endgroup::
