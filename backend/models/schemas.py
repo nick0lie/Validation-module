@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+
+
 class DBConnectionBase(BaseModel):
     name: str
     host: str
@@ -21,6 +23,7 @@ class ValidationRuleBase(BaseModel):
     rule_name: str
     rule_type: str  
     sql_text: str
+    rule_description: str | None = None
 
 class ValidationRuleCreate(ValidationRuleBase):
     pass
@@ -35,3 +38,6 @@ class RunCheckRequest(BaseModel):
     rule_name: str
     connection_name: str
     table_params: dict[str, str]
+
+class ExportRequest(BaseModel):
+    result_id: int

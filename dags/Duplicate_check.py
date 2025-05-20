@@ -1,166 +1,101 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.hooks.base_hook import BaseHook
-from datetime import datetime, date
-import psycopg2
-import pytz
+from datetime import datetime
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 import json
+import logging
 
-moscow_tz = pytz.timezone('Europe/Moscow')
+def quote_full_table_name(full_name: str) -> str:
+    schema, table = full_name.split(".")
+    return f'"{schema}"."{table}"'
 
-def log_check_result(conn_params, check_type, check_table, check_output, check_initiator):
-    try:
-        conn = psycopg2.connect(**conn_params)
-        cursor = conn.cursor()
+def run_duplicate_rows_check(**kwargs):
+    conf = kwargs["dag_run"].conf or {}
+    result_id = conf.get("result_id")
+    db_url = conf.get("db_url")
+    table_params = conf.get("table_params", {})
 
-        cursor.execute('SELECT COALESCE(MAX(check_id), 0) + 1 FROM "etl_sys"."Result_short";')
-        check_id = cursor.fetchone()[0]
+    source_table = table_params.get("source_table")
+    key_columns_raw = table_params.get("key_columns")
 
-        insert_query = """
-        INSERT INTO "etl_sys"."Result_short" ("check_id", "check_type", "check_table", 
-                                                 "check_result", "check_output", 
-                                                 "check_initiator", "check_date")
-        VALUES (%s, %s, %s, %s, %s, %s, %s);
-        """
-        check_result = 1 if check_output > 0 else 0
-        cursor.execute(insert_query, (
-            check_id,
-            check_type,
-            check_table,
-            check_result,
-            check_output,
-            check_initiator,
-            datetime.now(moscow_tz)
-        ))
+    if not all([result_id, db_url, source_table, key_columns_raw]):
+        raise ValueError("Не указаны обязательные параметры: source_table, key_columns")
 
-        conn.commit()
-        return check_id
+    quoted_table = quote_full_table_name(source_table)
+    key_columns = [f'"{col.strip()}"' for col in key_columns_raw.split(",")]
+    key_expr = ", ".join(key_columns)
 
-    except Exception as e:
-        print(f"Ошибка при записи в таблицу Result_short: {e}")
-        return None
-    finally:
-        cursor.close()
-        conn.close()
-
-def fetch_duplicates(cursor, table_name, key_columns):
-    key_columns_str = ', '.join(key_columns)
-    query = f"""
-    SELECT {key_columns_str}, COUNT(*) 
-    FROM {table_name} 
-    GROUP BY {key_columns_str}
-    HAVING COUNT(*) > 1;
-    """
-    cursor.execute(query)
-    return cursor.fetchall()
-
-def serialize_data(value):
-    if isinstance(value, (datetime, date)):
-        return value.isoformat()
-    return value
-
-def log_duplicate_rows(conn_params, duplicates, check_id, table_name, check_initiator, check_type, key_columns):
-    if not duplicates:
-        return
+    engine_source = create_engine(db_url)
+    engine_result = create_engine("postgresql+psycopg2://val_user:val_pass@validation-db:5432/validation_results")
+    SessionLocal = sessionmaker(bind=engine_result)
+    session = SessionLocal()
 
     try:
-        conn = psycopg2.connect(**conn_params)
-        cursor = conn.cursor()
-
-        cursor.execute('SELECT COALESCE(MAX(row_id), 0) + 1 FROM "etl_sys"."Result_full";')
-        max_row_id = cursor.fetchone()[0]
-
-        for duplicate in duplicates:
-            duplicate_count = duplicate[-1]
-            duplicate_data = {key_columns[i]: serialize_data(duplicate[i]) for i in range(len(key_columns))}
-            duplicate_data['duplicate_count'] = duplicate_count
-
-            duplicate_json = json.dumps(duplicate_data)
-
-            insert_query = """
-            INSERT INTO "etl_sys"."Result_full" (row_id, check_id, check_type, check_table, row_data, check_initiator, check_date) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        with engine_source.connect() as conn:
+            sql = f"""
+                SELECT *, '{source_table}' AS table_name
+                FROM {quoted_table}
+                WHERE ({key_expr}) IN (
+                    SELECT {key_expr}
+                    FROM {quoted_table}
+                    GROUP BY {key_expr}
+                    HAVING COUNT(*) > 1
+                )
             """
-            cursor.execute(insert_query, (max_row_id, check_id, check_type, table_name, duplicate_json, check_initiator, datetime.now(moscow_tz)))
-            max_row_id += 1
+            rows = conn.execute(text(sql)).fetchall()
+            error_count = len(rows)
 
-        conn.commit()
-        print("Данные успешно вставлены.")
+        session.execute(text("""
+            UPDATE validation.validation_result
+            SET status = :status,
+                error_count = :error_count,
+                check_date = now()
+            WHERE result_id = :result_id
+        """), {
+            "status": error_count == 0,
+            "error_count": error_count,
+            "result_id": result_id
+        })
 
-    except Exception as e:
-        print(f"Ошибка при вставке данных: {e}")
-        conn.rollback()
+        if error_count > 0:
+            for row in rows:
+                session.execute(text("""
+                    INSERT INTO validation.validation_error
+                        (result_id, table_name, rule_name, record_reference, error_description)
+                    VALUES
+                        (:result_id, :table_name, :rule_name, :reference, :description)
+                """), {
+                    "result_id": result_id,
+                    "table_name": source_table,
+                    "rule_name": "duplicate_rows_check",
+                    "reference": json.dumps(dict(row._mapping), default=str, ensure_ascii=False),
+                    "description": f"Найдены дубли по полям: {key_columns_raw}"
+                })
 
-    finally:
-        cursor.close()
-        conn.close()
-
-def find_duplicates(conn_params, table_name, key_columns, check_initiator):
-    conn = None
-    cursor = None
-    duplicates = []
-    try:
-        conn = psycopg2.connect(**conn_params)
-        cursor = conn.cursor()
-
-        duplicates = fetch_duplicates(cursor, table_name, key_columns)
-
-        count_duplicates = len(duplicates)
-        print(f"Найдено дубликатов: {count_duplicates}")
-
-        check_id = log_check_result(conn_params, 'DUPLICATE_check', table_name, count_duplicates, check_initiator)
-
-        if check_id is None:
-            raise ValueError("Не удалось получить check_id!")
-
-        log_duplicate_rows(conn_params, duplicates, check_id, table_name, check_initiator, 'DUPLICATE_check', key_columns)
-
-        return count_duplicates, duplicates
+        session.commit()
 
     except Exception as e:
-        print(f"Ошибка при проверке таблицы {table_name}: {e}")
+        session.rollback()
+        logging.error("Ошибка выполнения duplicate_rows_check", exc_info=e)
+        raise
     finally:
-        if cursor is not None:
-            cursor.close()
-        if conn is not None:
-            conn.close()
-
-def check_table_for_duplicates(table_name, check_initiator):
-    conn_id = 'my_postgres_conn'
-    conn = BaseHook.get_connection(conn_id)
-
-    conn_params = {
-        'host': conn.host,
-        'dbname': conn.schema,
-        'user': conn.login,
-        'password': conn.password
-    }
-
-    ref_conn = psycopg2.connect(**conn_params)
-    ref_cursor = ref_conn.cursor()
-    ref_cursor.execute('SELECT pk_fields FROM "etl_sys"."etl_table_delta_cfg" WHERE table_nm=%s;', (table_name,))
-    result = ref_cursor.fetchone()
-    ref_cursor.close()
-    ref_conn.close()
-
-    if result is None:
-        print(f"No entry found for table {table_name} in etl_table_delta_cfg.")
-        return
-
-    key_columns = result[0].split(", ")
-    find_duplicates(conn_params, table_name, key_columns, check_initiator)
+        session.close()
 
 default_args = {
-    'owner': 'Nick',
-    'start_date': datetime(2024, 8, 1),
-    'retries': 1,
+    "start_date": datetime(2024, 1, 1),
 }
 
-with DAG('check_duplicate_values_dag', default_args=default_args, schedule_interval='@daily') as dag:
-    check_table_task = PythonOperator(
-        task_id='check_duplicate_values',
-        python_callable=check_table_for_duplicates,
-        op_kwargs={'table_name': '"Practic"."cash_flow_fact_claim_x_ins_risk"', 'check_initiator': 'Nick'},
-    )
+with DAG(
+    dag_id="duplicate_check",
+    default_args=default_args,
+    schedule_interval=None,
+    catchup=False,
+    description="Проверка на дубли по ключевым полям"
+) as dag:
 
-    check_table_task
+    task = PythonOperator(
+        task_id="run_duplicate_rows_check",
+        python_callable=run_duplicate_rows_check,
+        provide_context=True
+    )

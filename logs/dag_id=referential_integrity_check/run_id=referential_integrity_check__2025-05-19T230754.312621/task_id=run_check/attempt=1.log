@@ -1,0 +1,20 @@
+[2025-05-19T23:07:56.035+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-05-19T23:07:56.055+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: referential_integrity_check.run_check referential_integrity_check__2025-05-19T23:07:54.312621 [queued]>
+[2025-05-19T23:07:56.062+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: referential_integrity_check.run_check referential_integrity_check__2025-05-19T23:07:54.312621 [queued]>
+[2025-05-19T23:07:56.063+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-05-19T23:07:56.079+0000] {taskinstance.py:2330} INFO - Executing <Task(PythonOperator): run_check> on 2025-05-19 23:07:54.744350+00:00
+[2025-05-19T23:07:56.083+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62: DeprecationWarning: This process (pid=52) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-05-19T23:07:56.085+0000] {standard_task_runner.py:64} INFO - Started process 53 to run task
+[2025-05-19T23:07:56.085+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'referential_integrity_check', 'run_check', 'referential_integrity_check__2025-05-19T23:07:54.312621', '--job-id', '76', '--raw', '--subdir', 'DAGS_FOLDER/referential_integrity_check.py', '--cfg-path', '/tmp/tmpbvhq1p07']
+[2025-05-19T23:07:56.086+0000] {standard_task_runner.py:91} INFO - Job 76: Subtask run_check
+[2025-05-19T23:07:56.130+0000] {task_command.py:426} INFO - Running <TaskInstance: referential_integrity_check.run_check referential_integrity_check__2025-05-19T23:07:54.312621 [running]> on host ce279338416b
+[2025-05-19T23:07:56.218+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='referential_integrity_check' AIRFLOW_CTX_TASK_ID='run_check' AIRFLOW_CTX_EXECUTION_DATE='2025-05-19T23:07:54.744350+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='referential_integrity_check__2025-05-19T23:07:54.312621'
+[2025-05-19T23:07:56.219+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-05-19T23:07:56.301+0000] {python.py:237} INFO - Done. Returned value was: None
+[2025-05-19T23:07:56.302+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-05-19T23:07:56.309+0000] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=referential_integrity_check, task_id=run_check, run_id=referential_integrity_check__2025-05-19T23:07:54.312621, execution_date=20250519T230754, start_date=20250519T230756, end_date=20250519T230756
+[2025-05-19T23:07:56.338+0000] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-05-19T23:07:56.351+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-05-19T23:07:56.356+0000] {local_task_job_runner.py:222} INFO - ::endgroup::

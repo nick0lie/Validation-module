@@ -1,0 +1,47 @@
+[2025-05-19T21:51:47.433+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-05-19T21:51:47.454+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: export_result_to_excel.export_errors export_result__2025-05-19T21:51:46.552636 [queued]>
+[2025-05-19T21:51:47.463+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: export_result_to_excel.export_errors export_result__2025-05-19T21:51:46.552636 [queued]>
+[2025-05-19T21:51:47.463+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-05-19T21:51:47.583+0000] {taskinstance.py:2330} INFO - Executing <Task(PythonOperator): export_errors> on 2025-05-19 21:51:46.721281+00:00
+[2025-05-19T21:51:47.587+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62: DeprecationWarning: This process (pid=80) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-05-19T21:51:47.588+0000] {standard_task_runner.py:64} INFO - Started process 82 to run task
+[2025-05-19T21:51:47.588+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'export_result_to_excel', 'export_errors', 'export_result__2025-05-19T21:51:46.552636', '--job-id', '33', '--raw', '--subdir', 'DAGS_FOLDER/report_to_excel.py', '--cfg-path', '/tmp/tmphpnsvifu']
+[2025-05-19T21:51:47.591+0000] {standard_task_runner.py:91} INFO - Job 33: Subtask export_errors
+[2025-05-19T21:51:47.631+0000] {task_command.py:426} INFO - Running <TaskInstance: export_result_to_excel.export_errors export_result__2025-05-19T21:51:46.552636 [running]> on host 8753e3bbc301
+[2025-05-19T21:51:47.700+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='export_result_to_excel' AIRFLOW_CTX_TASK_ID='export_errors' AIRFLOW_CTX_EXECUTION_DATE='2025-05-19T21:51:46.721281+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='export_result__2025-05-19T21:51:46.552636'
+[2025-05-19T21:51:47.701+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-05-19T21:51:47.743+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-05-19T21:51:47.744+0000] {taskinstance.py:2905} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 465, in _execute_task
+    result = _execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 432, in _execute_callable
+    return execute_callable(context=context, **execute_callable_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/baseoperator.py", line 401, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/python.py", line 235, in execute
+    return_value = self.execute_callable()
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/python.py", line 252, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/report_to_excel.py", line 22, in export_to_excel
+    df.to_excel(path, index=False)
+  File "/home/airflow/.local/lib/python3.12/site-packages/pandas/core/generic.py", line 2345, in to_excel
+    formatter.write(
+  File "/home/airflow/.local/lib/python3.12/site-packages/pandas/io/formats/excel.py", line 946, in write
+    writer = ExcelWriter(  # type: ignore[abstract]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/pandas/io/excel/_openpyxl.py", line 57, in __init__
+    from openpyxl.workbook import Workbook
+ModuleNotFoundError: No module named 'openpyxl'
+[2025-05-19T21:51:47.754+0000] {taskinstance.py:1206} INFO - Marking task as FAILED. dag_id=export_result_to_excel, task_id=export_errors, run_id=export_result__2025-05-19T21:51:46.552636, execution_date=20250519T215146, start_date=20250519T215147, end_date=20250519T215147
+[2025-05-19T21:51:47.765+0000] {standard_task_runner.py:110} ERROR - Failed to execute job 33 for task export_errors (No module named 'openpyxl'; 82)
+[2025-05-19T21:51:47.802+0000] {local_task_job_runner.py:243} INFO - Task exited with return code 1
+[2025-05-19T21:51:47.814+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-05-19T21:51:47.818+0000] {local_task_job_runner.py:222} INFO - ::endgroup::

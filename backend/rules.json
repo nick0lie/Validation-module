@@ -1,0 +1,41 @@
+[
+  {
+    "rule_name": "referential_integrity_check",
+    "rule_type": "referential",
+    "sql_text": "SELECT * FROM {source_table} WHERE {source_column} NOT IN (SELECT {target_column} FROM {target_table})",
+    "rule_description": "Цель этой проверки — найти строки, в которых указано значение, отсутствующее в другой таблице.\n\nНапример, в таблице 'Платежи' указан договор 12345, но такого договора нет в таблице 'Договоров'. Такая строка будет показана как ошибка.\n\nЧто нужно выбрать:\n- Исходная таблица — где есть значение (например, 'Платежи')\n- Исходное поле — столбец с этим значением (например, номер договора)\n- Целевая таблица — где должны быть все допустимые значения\n- Целевое поле — столбец с этими значениями (например, список всех договоров)"
+  },
+  {
+    "rule_name": "null_check",
+    "rule_type": "null_check",
+    "sql_text": "SELECT * FROM {source_table} WHERE {columns_null_condition}",
+    "rule_description": "Цель этой проверки — найти строки, в которых какое-либо поле является пустым (NULL).\n\nЧто нужно выбрать:\n- Исходная таблица — таблица, которую нужно проверить"
+  },
+  {
+  "rule_name": "duplicate_check",
+  "rule_type": "duplicate",
+  "sql_text": "SELECT pk_columns, COUNT(*) FROM table GROUP BY pk_columns HAVING COUNT(*) > 1",
+  "rule_description": "Цель этой проверки — найти повторяющиеся строки по ключевым полям (например, первичным ключам).\n\nЧто нужно выбрать:\n- Исходная таблица — таблица, которую нужно проверить на дубликаты."
+  },
+  {
+  "rule_name": "duplicate_check",
+  "rule_type": "duplicate_check",
+  "sql_text": "SELECT *, {source_table} AS table_name FROM {quoted_table} WHERE {column} IS NOT NULLAND {column} IN (SELECT {column}FROM {quoted_table}GROUP BY {column}HAVING COUNT(*) > 1)",
+  "rule_description": "Цель этой проверки — найти повторяющиеся строки по выбранному полю.\n\nЧто нужно выбрать:\n- Исходная таблица — таблица, которую нужно проверить на дубликаты\n- Проверяемое поле — поле, по которому ищем повторы"
+  },
+  {
+  "rule_name": "attribute_reference_check",
+  "rule_type": "attribute_reference_check",
+  "sql_text": "SELECT * FROM {source_table} WHERE значение в любом из полей не входит в справочник {reference_table}",
+  "rule_description": "Цель этой проверки — найти некорректные значения атрибутов.\n\nЧто нужно выбрать:\n- Проверяемая таблица — таблица, в которой нужно проверить значения атрибутов\n- Таблица-справочник — таблица с допустимыми значениями в формате field_name / valid_value\n\nПроверка ищет значения, которые не соответствуют допустимым в справочнике (учитываются скрытые пробелы и регистр)"
+  },
+  {
+  "rule_name": "negative_flows_check",
+  "rule_type": "negative_flows_check",
+  "sql_text": "SELECT * FROM {source_table} WHERE любое числовое поле < 0",
+  "rule_description": "Цель этой проверки — найти отрицательные значения в числовых колонках таблицы.\n\nЧто нужно выбрать:\n- Таблица — таблица, в которой нужно проверить числовые поля на наличие отрицательных значений.\n\nПроверка ищет все строки, где хотя бы одно числовое значение меньше нуля."
+  }
+
+]
+
+

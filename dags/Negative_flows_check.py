@@ -1,176 +1,126 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.hooks.base_hook import BaseHook
 from datetime import datetime
-import psycopg2
-import pytz
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 import json
+import logging
 
-moscow_tz = pytz.timezone('Europe/Moscow')
+def quote_full_table_name(full_name: str) -> str:
+    schema, table = full_name.split(".")
+    return f'"{schema}"."{table}"'
 
-def log_check_result(conn_params, check_type, check_table, check_output, check_initiator):
-    try:
-        conn = psycopg2.connect(**conn_params)
-        cursor = conn.cursor()
+def run_negative_flows_check(**kwargs):
+    conf = kwargs["dag_run"].conf or {}
+    result_id = conf.get("result_id")
+    db_url = conf.get("db_url")
+    table_params = conf.get("table_params", {})
 
-        cursor.execute('SELECT COALESCE(MAX(check_id), 0) + 1 FROM "etl_sys"."Result_short";')
-        check_id = cursor.fetchone()[0]
+    source_table = table_params.get("source_table")
 
-        insert_query = """
-        INSERT INTO "etl_sys"."Result_short" ("check_id", "check_type", "check_table", 
-                                                 "check_result", "check_output", 
-                                                 "check_initiator", "check_date")
-        VALUES (%s, %s, %s, %s, %s, %s, %s);
-        """
-        check_result = 1 if check_output > 0 else 0
-        cursor.execute(insert_query, (
-            check_id,
-            check_type,
-            check_table,
-            check_result,
-            check_output,
-            check_initiator,
-            datetime.now(moscow_tz)
-        ))
+    if not all([result_id, db_url, source_table]):
+        raise ValueError("Не указана таблица или результат")
 
-        conn.commit()
-        return check_id
+    quoted_table = quote_full_table_name(source_table)
 
-    except Exception as e:
-        print(f"Ошибка при записи в таблицу Result_short: {e}")
-        return None
-    finally:
-        cursor.close()
-        conn.close()
-
-def fetch_negative_rows(cursor, table_name):
-    # Проверяем отрицательные значения только в колонке 'payment_amt'
-    negative_rows_query = f"""
-    SELECT * FROM {table_name} WHERE payment_amt < 0
-    """
-    print(f"Выполняемый запрос: {negative_rows_query}")
-    
-    cursor.execute(negative_rows_query)
-    
-    negative_rows_data = cursor.fetchall()
-    print(f"Количество найденных строк с отрицательными значениями: {len(negative_rows_data)}")
-    
-    result = []
-    column_names = [desc[0] for desc in cursor.description]
-    for row in negative_rows_data:
-        row_dict = {column_names[i]: row[i] for i in range(len(column_names))}
-        result.append(row_dict)
-
-    return result
-
-def serialize_value(value):
-    """
-    Преобразование значения в JSON-совместимый формат.
-    """
-    if value is None:
-        return None
-    if isinstance(value, (int, float, str, bool)):
-        return value
-    if isinstance(value, (list, tuple)):
-        return [serialize_value(v) for v in value]
-    if isinstance(value, dict):
-        return {k: serialize_value(v) for k, v in value.items()}
-    if hasattr(value, 'isoformat'):
-        return value.isoformat()
-    return str(value)  # Преобразуем неизвестные типы в строку
-
-def log_negative_rows(conn_params, negative_rows, check_id, table_name, check_initiator, check_type):
-    if not negative_rows:
-        return  
+    engine = create_engine(db_url)
+    engine_result = create_engine("postgresql+psycopg2://val_user:val_pass@validation-db:5432/validation_results")
+    SessionLocal = sessionmaker(bind=engine_result)
+    session = SessionLocal()
 
     try:
-        conn = psycopg2.connect(**conn_params)
-        cursor = conn.cursor()
-
-        # Получаем максимальный row_id
-        cursor.execute('SELECT COALESCE(MAX(row_id), 0) + 1 FROM "etl_sys"."Result_full";')
-        max_row_id = cursor.fetchone()[0]
-
-        for negative_row in negative_rows:
-            # Используем функцию serialize_value для преобразования значений в JSON-совместимый формат
-            serialized_row = {k: serialize_value(v) for k, v in negative_row.items()}
-            negative_row_json = json.dumps(serialized_row)
-
-            print(f"Inserting row: check_id={check_id}, table_name={table_name}, check_initiator={check_initiator}, check_type={check_type}, row_data={negative_row_json}")
-
-            insert_query = """
-            INSERT INTO "etl_sys"."Result_full" (row_id, check_id, check_type, check_table, row_data, check_initiator, check_date) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        with engine.connect() as conn:
+            type_query = f"""
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_schema = '{source_table.split('.')[0].strip('"')}'
+                  AND table_name = '{source_table.split('.')[1].strip('"')}'
+                  AND data_type IN ('numeric', 'integer', 'bigint', 'double precision', 'real', 'decimal', 'smallint')
             """
-            cursor.execute(insert_query, (max_row_id, check_id, check_type, table_name, negative_row_json, check_initiator, datetime.now(moscow_tz)))
+            type_result = conn.execute(text(type_query)).fetchall()
+            numeric_columns = [row[0] for row in type_result]
 
-            max_row_id += 1
+            if not numeric_columns:
+                raise ValueError("В таблице нет числовых колонок")
 
-        conn.commit()
-        print("Данные успешно вставлены.")
+            where_clause = " OR ".join([f'"{col}" < 0' for col in numeric_columns])
+            query = f"""
+                SELECT *, '{source_table}' AS table_name
+                FROM {quoted_table}
+                WHERE {where_clause}
+            """
+
+            rows = conn.execute(text(query)).fetchall()
+            error_count = len(rows)
+
+        # Запись результатов
+        session.execute(text("""
+            UPDATE validation.validation_result
+            SET status = :status,
+                error_count = :error_count,
+                check_date = now()
+            WHERE result_id = :result_id
+        """), {
+            "status": error_count == 0,
+            "error_count": error_count,
+            "result_id": result_id
+        })
+
+        for row in rows:
+            row_dict = dict(row._mapping)
+            # ищем первое поле с отрицательным значением
+            negative_field = None
+            negative_value = None
+            for field in numeric_columns:
+                val = row_dict.get(field)
+                if isinstance(val, (int, float)) and val < 0:
+                    negative_field = field
+                    negative_value = val
+                    break
+
+            description = (
+                f"Отрицательное значение {negative_value} в поле '{negative_field}'"
+                if negative_field else
+                "Обнаружено отрицательное значение"
+            )
+
+            session.execute(text("""
+                INSERT INTO validation.validation_error
+                    (result_id, table_name, rule_name, record_reference, error_description)
+                VALUES
+                    (:result_id, :table_name, :rule_name, :reference, :description)
+            """), {
+                "result_id": result_id,
+                "table_name": source_table,
+                "rule_name": "negative_flows_check",
+                "reference": json.dumps(row_dict, default=str, ensure_ascii=False),
+                "description": description
+            })
+
+
+        session.commit()
 
     except Exception as e:
-        print(f"Ошибка при вставке данных: {e}")
-        conn.rollback()
-
+        session.rollback()
+        logging.error("Ошибка выполнения negative_flows_check", exc_info=e)
+        raise
     finally:
-        cursor.close()
-        conn.close()
-
-def find_negative_rows(conn_params, table_name, check_initiator):
-    conn = None
-    cursor = None
-    negative_rows = []
-    try:
-        conn = psycopg2.connect(**conn_params)
-        cursor = conn.cursor()
-
-        negative_rows = fetch_negative_rows(cursor, table_name)
-
-        count_negative_rows = len(negative_rows)
-        print(f"Найдено строк с отрицательными значениями: {count_negative_rows}")
-
-        check_id = log_check_result(conn_params, 'NEGATIVE_check', table_name, count_negative_rows, check_initiator)
-
-        if check_id is None:
-            raise ValueError("Не удалось получить check_id!")
-
-        log_negative_rows(conn_params, negative_rows, check_id, table_name, check_initiator, 'NEGATIVE_check')
-
-        return count_negative_rows, negative_rows
-
-    except Exception as e:
-        print(f"Ошибка при проверке таблицы {table_name}: {e}")
-    finally:
-        if cursor is not None:
-            cursor.close()
-        if conn is not None:
-            conn.close()
-
-def check_table_for_negatives(table_name, check_initiator):
-    conn_id = 'my_postgres_conn'
-    conn = BaseHook.get_connection(conn_id)
-
-    conn_params = {
-        'host': conn.host,
-        'dbname': conn.schema,
-        'user': conn.login,
-        'password': conn.password
-    }
-
-    find_negative_rows(conn_params, table_name, check_initiator)
+        session.close()
 
 default_args = {
-    'owner': 'Nick',
-    'start_date': datetime(2024, 8, 1),
-    'retries': 1,
+    "start_date": datetime(2024, 1, 1),
 }
 
-with DAG('check_negative_values_dag', default_args=default_args, schedule_interval='@daily') as dag:
-    check_table_task = PythonOperator(
-        task_id='check_negative_values',
-        python_callable=check_table_for_negatives,
-        op_kwargs={'table_name': '"Practic"."cash_flow_fact_claim_x_ins_risk"', 'check_initiator': 'Nick'},
-    )
+with DAG(
+    dag_id="negative_flows_check",
+    default_args=default_args,
+    schedule_interval=None,
+    catchup=False,
+    description="Проверка на отрицательные значения в таблице"
+) as dag:
 
-    check_table_task
+    task = PythonOperator(
+        task_id="run_negative_flows_check",
+        python_callable=run_negative_flows_check,
+        provide_context=True
+    )

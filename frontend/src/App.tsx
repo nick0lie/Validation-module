@@ -6,9 +6,6 @@ import CheckRunner from "./components/CheckRunner";
 function App() {
   return (
     <Router>
-      <nav style={{ padding: "10px" }}>
-        <Link to="/">Проверки</Link> | <Link to="/reports">Отчёты</Link>
-      </nav>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/reports" element={<Reports />} />

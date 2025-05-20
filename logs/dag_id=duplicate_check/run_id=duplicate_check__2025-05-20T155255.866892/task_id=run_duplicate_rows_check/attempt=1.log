@@ -1,0 +1,20 @@
+[2025-05-20T15:52:56.717+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-05-20T15:52:56.737+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: duplicate_check.run_duplicate_rows_check duplicate_check__2025-05-20T15:52:55.866892 [queued]>
+[2025-05-20T15:52:56.744+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: duplicate_check.run_duplicate_rows_check duplicate_check__2025-05-20T15:52:55.866892 [queued]>
+[2025-05-20T15:52:56.745+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-05-20T15:52:56.762+0000] {taskinstance.py:2330} INFO - Executing <Task(PythonOperator): run_duplicate_rows_check> on 2025-05-20 15:52:55.878555+00:00
+[2025-05-20T15:52:56.766+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62: DeprecationWarning: This process (pid=125) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-05-20T15:52:56.767+0000] {standard_task_runner.py:64} INFO - Started process 126 to run task
+[2025-05-20T15:52:56.767+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'duplicate_check', 'run_duplicate_rows_check', 'duplicate_check__2025-05-20T15:52:55.866892', '--job-id', '31', '--raw', '--subdir', 'DAGS_FOLDER/Duplicate_check.py', '--cfg-path', '/tmp/tmpqab5nrid']
+[2025-05-20T15:52:56.768+0000] {standard_task_runner.py:91} INFO - Job 31: Subtask run_duplicate_rows_check
+[2025-05-20T15:52:56.809+0000] {task_command.py:426} INFO - Running <TaskInstance: duplicate_check.run_duplicate_rows_check duplicate_check__2025-05-20T15:52:55.866892 [running]> on host e153ee340532
+[2025-05-20T15:52:56.895+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='duplicate_check' AIRFLOW_CTX_TASK_ID='run_duplicate_rows_check' AIRFLOW_CTX_EXECUTION_DATE='2025-05-20T15:52:55.878555+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='duplicate_check__2025-05-20T15:52:55.866892'
+[2025-05-20T15:52:56.896+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-05-20T15:52:56.970+0000] {python.py:237} INFO - Done. Returned value was: None
+[2025-05-20T15:52:56.972+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-05-20T15:52:56.980+0000] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=duplicate_check, task_id=run_duplicate_rows_check, run_id=duplicate_check__2025-05-20T15:52:55.866892, execution_date=20250520T155255, start_date=20250520T155256, end_date=20250520T155256
+[2025-05-20T15:52:57.021+0000] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-05-20T15:52:57.035+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-05-20T15:52:57.039+0000] {local_task_job_runner.py:222} INFO - ::endgroup::

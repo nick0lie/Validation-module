@@ -1,0 +1,102 @@
+[2025-05-20T17:04:01.668+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-05-20T17:04:01.687+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: export_results_by_period.export_results_task export_results_by_period__2025-05-20T17:04:00.174945 [queued]>
+[2025-05-20T17:04:01.695+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: export_results_by_period.export_results_task export_results_by_period__2025-05-20T17:04:00.174945 [queued]>
+[2025-05-20T17:04:01.696+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-05-20T17:04:01.824+0000] {taskinstance.py:2330} INFO - Executing <Task(PythonOperator): export_results_task> on 2025-05-20 17:04:00.188948+00:00
+[2025-05-20T17:04:01.829+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62: DeprecationWarning: This process (pid=67) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-05-20T17:04:01.830+0000] {standard_task_runner.py:64} INFO - Started process 69 to run task
+[2025-05-20T17:04:01.830+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'export_results_by_period', 'export_results_task', 'export_results_by_period__2025-05-20T17:04:00.174945', '--job-id', '46', '--raw', '--subdir', 'DAGS_FOLDER/export_results_by_period.py', '--cfg-path', '/tmp/tmptwgehqlx']
+[2025-05-20T17:04:01.832+0000] {standard_task_runner.py:91} INFO - Job 46: Subtask export_results_task
+[2025-05-20T17:04:01.873+0000] {task_command.py:426} INFO - Running <TaskInstance: export_results_by_period.export_results_task export_results_by_period__2025-05-20T17:04:00.174945 [running]> on host 61f74d83478a
+[2025-05-20T17:04:01.948+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='export_results_by_period' AIRFLOW_CTX_TASK_ID='export_results_task' AIRFLOW_CTX_EXECUTION_DATE='2025-05-20T17:04:00.188948+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='export_results_by_period__2025-05-20T17:04:00.174945'
+[2025-05-20T17:04:01.950+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-05-20T17:04:01.969+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-05-20T17:04:01.970+0000] {taskinstance.py:2905} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1910, in _execute_context
+    self.dialect.do_execute(
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 736, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedTable: relation "validation_rule" does not exist
+LINE 5:             JOIN validation_rule r ON r.rule_id = vr.rule_id
+                         ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 465, in _execute_task
+    result = _execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 432, in _execute_callable
+    return execute_callable(context=context, **execute_callable_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/baseoperator.py", line 401, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/python.py", line 235, in execute
+    return_value = self.execute_callable()
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/python.py", line 252, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/export_results_by_period.py", line 39, in export_results_by_period
+    result_rows = conn.execute(text(result_query), params).fetchall()
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1385, in execute
+    return meth(self, multiparams, params, _EMPTY_EXECUTION_OPTS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 334, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1577, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1953, in _execute_context
+    self._handle_dbapi_exception(
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2134, in _handle_dbapi_exception
+    util.raise_(
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/util/compat.py", line 211, in raise_
+    raise exception
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1910, in _execute_context
+    self.dialect.do_execute(
+  File "/home/airflow/.local/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 736, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedTable) relation "validation_rule" does not exist
+LINE 5:             JOIN validation_rule r ON r.rule_id = vr.rule_id
+                         ^
+
+[SQL: 
+            SELECT vr.result_id, vr.check_date, vr.status, vr.error_count,
+                   r.rule_name, t.table_name
+            FROM validation.validation_result vr
+            JOIN validation_rule r ON r.rule_id = vr.rule_id
+            JOIN check_table t ON t.table_id = vr.table_id
+            WHERE vr.check_date BETWEEN %(start)s AND %(end)s
+              AND r.rule_name = ANY(%(rules)s)
+            ORDER BY vr.check_date;
+        ]
+[parameters: {'start': '2025-05-18', 'end': '2025-05-21', 'rules': ['referential_integrity_check', 'duplicate_check', 'attribute_reference_check', 'null_check', 'negative_flows_check']}]
+(Background on this error at: https://sqlalche.me/e/14/f405)
+[2025-05-20T17:04:01.985+0000] {taskinstance.py:1206} INFO - Marking task as FAILED. dag_id=export_results_by_period, task_id=export_results_task, run_id=export_results_by_period__2025-05-20T17:04:00.174945, execution_date=20250520T170400, start_date=20250520T170401, end_date=20250520T170401
+[2025-05-20T17:04:02.011+0000] {standard_task_runner.py:110} ERROR - Failed to execute job 46 for task export_results_task ((psycopg2.errors.UndefinedTable) relation "validation_rule" does not exist
+LINE 5:             JOIN validation_rule r ON r.rule_id = vr.rule_id
+                         ^
+
+[SQL: 
+            SELECT vr.result_id, vr.check_date, vr.status, vr.error_count,
+                   r.rule_name, t.table_name
+            FROM validation.validation_result vr
+            JOIN validation_rule r ON r.rule_id = vr.rule_id
+            JOIN check_table t ON t.table_id = vr.table_id
+            WHERE vr.check_date BETWEEN %(start)s AND %(end)s
+              AND r.rule_name = ANY(%(rules)s)
+            ORDER BY vr.check_date;
+        ]
+[parameters: {'start': '2025-05-18', 'end': '2025-05-21', 'rules': ['referential_integrity_check', 'duplicate_check', 'attribute_reference_check', 'null_check', 'negative_flows_check']}]
+(Background on this error at: https://sqlalche.me/e/14/f405); 69)
+[2025-05-20T17:04:02.044+0000] {local_task_job_runner.py:243} INFO - Task exited with return code 1
+[2025-05-20T17:04:02.057+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-05-20T17:04:02.062+0000] {local_task_job_runner.py:222} INFO - ::endgroup::

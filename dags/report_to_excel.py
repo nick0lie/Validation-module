@@ -3,55 +3,59 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 from sqlalchemy import create_engine, text
 import pandas as pd
-import os
+import ast
+import json
 
 def export_to_excel(**kwargs):
-    conf = kwargs["dag_run"].conf or {}
-    result_id = conf.get("result_id")
-    db_url = conf.get("db_url")
+    conf = kwargs["dag_run"].conf
+    result_id = conf["result_id"]
 
-    if not result_id or not db_url:
-        raise ValueError("Нужно указать result_id и db_url")
+    engine = create_engine("postgresql+psycopg2://val_user:val_pass@validation-db:5432/validation_results")
 
-    engine = create_engine(db_url)
     with engine.connect() as conn:
-        result_query = text("""
-            SELECT vr.result_id, vr.check_date, vr.status, vr.error_count,
-                   vr.tables_used, vr.error_log,
-                   r.rule_name, r.rule_description
-            FROM validation.validation_result vr
-            JOIN validation.validation_rule r ON r.rule_id = vr.rule_id
-            WHERE vr.result_id = :result_id
-        """)
-        df = pd.read_sql(result_query, conn, params={"result_id": result_id})
+        df = pd.read_sql(f"""
+            SELECT table_name, rule_name, record_reference, error_description
+            FROM validation.validation_error
+            WHERE result_id = {result_id}
+        """, conn)
 
         if df.empty:
-            raise ValueError(f"Результат с ID {result_id} не найден")
+            table_name = "NoErrors"
+            details_df = pd.DataFrame()
+        else:
+            table_name = df.iloc[0]["table_name"]
+            parsed = []
 
-        filename = f"report_result_{result_id}.xlsx"
-        file_path = f"/opt/airflow/reports/{filename}"
+            for record in df["record_reference"]:
+                try:
+                    parsed.append(ast.literal_eval(record))
+                except Exception:
+                    parsed.append({})
 
-        os.makedirs("/opt/airflow/reports", exist_ok=True)
-        df.to_excel(file_path, index=False)
-        print(f"✅ Отчет сохранен: {file_path}")
+            details_df = pd.DataFrame(parsed)
 
-        return {"status": "success", "file": file_path}
+    path = f"/opt/airflow/reports/report_result_{result_id}.xlsx"
 
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="Check_Result", index=False)
+        details_df.to_excel(writer, sheet_name=table_name[:31], index=False)  # Excel ограничение 31 символ
+
+    print(f"Файл сохранён: {path}")
+
+# Airflow DAG
 default_args = {
     "start_date": datetime(2024, 1, 1),
 }
 
 with DAG(
-    dag_id="report_to_excel",
+    dag_id="export_result_to_excel",
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    tags=["export"],
-    description="Экспорт результата проверки в Excel по result_id",
+    description="Экспорт результатов проверок в Excel"
 ) as dag:
-
     task = PythonOperator(
-        task_id="export_excel",
+        task_id="export_errors",
         python_callable=export_to_excel,
         provide_context=True,
     )

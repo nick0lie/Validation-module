@@ -1,0 +1,20 @@
+[2025-05-20T15:46:48.787+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-05-20T15:46:48.807+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: null_check.run_null_check null_check__2025-05-20T15:46:47.868770 [queued]>
+[2025-05-20T15:46:48.814+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: null_check.run_null_check null_check__2025-05-20T15:46:47.868770 [queued]>
+[2025-05-20T15:46:48.814+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-05-20T15:46:48.831+0000] {taskinstance.py:2330} INFO - Executing <Task(PythonOperator): run_null_check> on 2025-05-20 15:46:47.880299+00:00
+[2025-05-20T15:46:48.835+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62: DeprecationWarning: This process (pid=121) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-05-20T15:46:48.836+0000] {standard_task_runner.py:64} INFO - Started process 122 to run task
+[2025-05-20T15:46:48.836+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'null_check', 'run_null_check', 'null_check__2025-05-20T15:46:47.868770', '--job-id', '29', '--raw', '--subdir', 'DAGS_FOLDER/null_check.py', '--cfg-path', '/tmp/tmpgipuw87f']
+[2025-05-20T15:46:48.837+0000] {standard_task_runner.py:91} INFO - Job 29: Subtask run_null_check
+[2025-05-20T15:46:48.877+0000] {task_command.py:426} INFO - Running <TaskInstance: null_check.run_null_check null_check__2025-05-20T15:46:47.868770 [running]> on host e153ee340532
+[2025-05-20T15:46:48.956+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='null_check' AIRFLOW_CTX_TASK_ID='run_null_check' AIRFLOW_CTX_EXECUTION_DATE='2025-05-20T15:46:47.880299+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='null_check__2025-05-20T15:46:47.868770'
+[2025-05-20T15:46:48.957+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-05-20T15:46:49.040+0000] {python.py:237} INFO - Done. Returned value was: None
+[2025-05-20T15:46:49.042+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-05-20T15:46:49.050+0000] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=null_check, task_id=run_null_check, run_id=null_check__2025-05-20T15:46:47.868770, execution_date=20250520T154647, start_date=20250520T154648, end_date=20250520T154649
+[2025-05-20T15:46:49.090+0000] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-05-20T15:46:49.103+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-05-20T15:46:49.108+0000] {local_task_job_runner.py:222} INFO - ::endgroup::

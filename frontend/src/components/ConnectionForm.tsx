@@ -31,51 +31,51 @@ function ConnectionForm({
   };
 
   const handleConnect = async () => {
-  setMessage("");
+    setMessage("");
 
-  const { host, port, dbname, user, password } = form;
-  const params = new URLSearchParams({
-    host,
-    port: String(port),
-    dbname,
-    user,
-    password,
-  }).toString();
+    const { host, port, dbname, user, password } = form;
+    const params = new URLSearchParams({
+      host,
+      port: String(port),
+      dbname,
+      user,
+      password,
+    }).toString();
 
-  try {
-    const testRes = await fetch(`http://localhost:8000/api/connections/test?${params}`);
-    const testData = await testRes.json();
+    try {
+      const testRes = await fetch(`http://localhost:8000/api/connections/test?${params}`);
+      const testData = await testRes.json();
 
-    if (!testRes.ok) {
-      setMessage(testData.detail || "Ошибка при проверке");
-      return;
+      if (!testRes.ok) {
+        setMessage(testData.detail || "Ошибка при проверке");
+        return;
+      }
+
+      const saveRes = await fetch("http://localhost:8000/api/connections/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const saveData = await saveRes.json();
+
+      if (!saveRes.ok) {
+        setMessage(saveData.detail || "Ошибка сохранения");
+      } else {
+        setMessage("✅ Подключение успешно сохранено");
+        onSave();
+      }
+    } catch {
+      setMessage("Ошибка запроса");
     }
-
-    const saveRes = await fetch("http://localhost:8000/api/connections/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    const saveData = await saveRes.json();
-
-    if (!saveRes.ok) {
-      setMessage(saveData.detail || "Ошибка сохранения");
-    } else {
-      setMessage("Подключение успешно сохранено");
-      onSave();
-    }
-  } catch {
-    setMessage("Ошибка запроса");
-  }
   };
-
-
 
   return (
     <div style={{ marginTop: "20px" }}>
-      <h3>{existing ? "Редактировать подключение" : "Новое подключение"}</h3>
-      <div style={{ display: "grid", gap: "10px", maxWidth: "400px" }}>
+      <h3 style={{ fontSize: "1.3rem", marginBottom: "1rem" }}>
+        {existing ? "Редактировать подключение" : "Новое подключение"}
+      </h3>
+      <div style={{ display: "grid", gap: "12px", maxWidth: "400px" }}>
         {["name", "host", "port", "dbname", "user", "password"].map((field) => (
           <input
             key={field}
@@ -84,11 +84,49 @@ function ConnectionForm({
             value={form[field as keyof typeof form]}
             onChange={handleChange}
             placeholder={field}
+            style={{
+              padding: "0.6rem",
+              fontSize: "1rem",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
           />
         ))}
-        <button onClick={handleConnect}>Подключить</button>
-        <button onClick={onCancel}>Отмена</button>
-        <div>{message}</div>
+        <div style={{ display: "flex", gap: "1rem" }}>
+          <button
+            onClick={handleConnect}
+            style={{
+              padding: "0.5rem 1rem",
+              backgroundColor: "#4CAF50",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              flex: 1,
+            }}
+          >
+            Подключить
+          </button>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "0.5rem 1rem",
+              backgroundColor: "#bbb",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              flex: 1,
+            }}
+          >
+            Отмена
+          </button>
+        </div>
+        {message && (
+          <div style={{ marginTop: "0.5rem", color: message.includes("успешно") ? "green" : "red" }}>
+            {message}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,83 @@
+[2025-05-20T13:44:11.153+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-05-20T13:44:11.171+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: export_result_to_excel.export_errors export_result__2025-05-20T13:44:09.135953 [queued]>
+[2025-05-20T13:44:11.177+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: export_result_to_excel.export_errors export_result__2025-05-20T13:44:09.135953 [queued]>
+[2025-05-20T13:44:11.177+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-05-20T13:44:11.190+0000] {taskinstance.py:2330} INFO - Executing <Task(PythonOperator): export_errors> on 2025-05-20 13:44:09.400539+00:00
+[2025-05-20T13:44:11.194+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62: DeprecationWarning: This process (pid=63) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-05-20T13:44:11.195+0000] {standard_task_runner.py:64} INFO - Started process 65 to run task
+[2025-05-20T13:44:11.195+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'export_result_to_excel', 'export_errors', 'export_result__2025-05-20T13:44:09.135953', '--job-id', '10', '--raw', '--subdir', 'DAGS_FOLDER/report_to_excel.py', '--cfg-path', '/tmp/tmpngxl3rtb']
+[2025-05-20T13:44:11.197+0000] {standard_task_runner.py:91} INFO - Job 10: Subtask export_errors
+[2025-05-20T13:44:11.234+0000] {task_command.py:426} INFO - Running <TaskInstance: export_result_to_excel.export_errors export_result__2025-05-20T13:44:09.135953 [running]> on host e153ee340532
+[2025-05-20T13:44:11.300+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='export_result_to_excel' AIRFLOW_CTX_TASK_ID='export_errors' AIRFLOW_CTX_EXECUTION_DATE='2025-05-20T13:44:09.400539+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='export_result__2025-05-20T13:44:09.135953'
+[2025-05-20T13:44:11.301+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-05-20T13:44:11.338+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-05-20T13:44:11.338+0000] {taskinstance.py:2905} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/opt/airflow/dags/report_to_excel.py", line 49, in export_to_excel
+    wb = load_workbook(file_path)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/reader/excel.py", line 346, in load_workbook
+    reader = ExcelReader(filename, read_only, keep_vba,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/reader/excel.py", line 123, in __init__
+    self.archive = _validate_archive(fn)
+                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/reader/excel.py", line 95, in _validate_archive
+    archive = ZipFile(filename, 'r')
+              ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/zipfile/__init__.py", line 1349, in __init__
+    self._RealGetContents()
+  File "/usr/local/lib/python3.12/zipfile/__init__.py", line 1416, in _RealGetContents
+    raise BadZipFile("File is not a zip file")
+zipfile.BadZipFile: File is not a zip file
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 465, in _execute_task
+    result = _execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 432, in _execute_callable
+    return execute_callable(context=context, **execute_callable_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/baseoperator.py", line 401, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/python.py", line 235, in execute
+    return_value = self.execute_callable()
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/python.py", line 252, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/report_to_excel.py", line 47, in export_to_excel
+    with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+  File "/home/airflow/.local/lib/python3.12/site-packages/pandas/io/excel/_base.py", line 1370, in __exit__
+    self.close()
+  File "/home/airflow/.local/lib/python3.12/site-packages/pandas/io/excel/_base.py", line 1374, in close
+    self._save()
+  File "/home/airflow/.local/lib/python3.12/site-packages/pandas/io/excel/_openpyxl.py", line 110, in _save
+    self.book.save(self._handles.handle)
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/workbook/workbook.py", line 386, in save
+    save_workbook(self, filename)
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/writer/excel.py", line 294, in save_workbook
+    writer.save()
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/writer/excel.py", line 275, in save
+    self.write_data()
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/writer/excel.py", line 89, in write_data
+    archive.writestr(ARC_WORKBOOK, writer.write())
+                                   ^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/workbook/_writer.py", line 150, in write
+    self.write_views()
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/workbook/_writer.py", line 137, in write_views
+    active = get_active_sheet(self.wb)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/openpyxl/workbook/_writer.py", line 35, in get_active_sheet
+    raise IndexError("At least one sheet must be visible")
+IndexError: At least one sheet must be visible
+[2025-05-20T13:44:11.349+0000] {taskinstance.py:1206} INFO - Marking task as FAILED. dag_id=export_result_to_excel, task_id=export_errors, run_id=export_result__2025-05-20T13:44:09.135953, execution_date=20250520T134409, start_date=20250520T134411, end_date=20250520T134411
+[2025-05-20T13:44:11.361+0000] {standard_task_runner.py:110} ERROR - Failed to execute job 10 for task export_errors (At least one sheet must be visible; 65)
+[2025-05-20T13:44:11.369+0000] {local_task_job_runner.py:243} INFO - Task exited with return code 1
+[2025-05-20T13:44:11.381+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-05-20T13:44:11.384+0000] {local_task_job_runner.py:222} INFO - ::endgroup::

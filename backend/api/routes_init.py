@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, text
 from datetime import datetime
 from pydantic import BaseModel  
 from database import get_db
-from models.database_models import CheckTable, ValidationResult, ValidationRule, DBConnection
+from models.database_models import CheckTable, ValidationResult, ValidationRule, DBConnection, ValidationError
 from utils.connection_utils import test_postgres_connection
-from models.schemas import DBConnectionCreate, DBConnectionOut, ValidationRuleCreate, ValidationRuleOut, RunCheckRequest
+from models.schemas import DBConnectionCreate, DBConnectionOut, ValidationRuleCreate, ValidationRuleOut, RunCheckRequest, ExportRequest
 import json
 from fastapi.responses import FileResponse
 import os
@@ -20,6 +20,13 @@ router = APIRouter()
 
 @router.post("/trigger_dag")
 def trigger_dag(payload: RunCheckRequest, db: Session = Depends(get_db)):
+    from datetime import datetime
+    import requests
+    from models.database_models import (
+        ValidationResult, DBConnection, ValidationRule, CheckTable
+    )
+
+    # Получаем подключение и правило
     conn = db.query(DBConnection).filter_by(name=payload.connection_name).first()
     if not conn:
         raise HTTPException(status_code=404, detail="Подключение не найдено")
@@ -30,51 +37,75 @@ def trigger_dag(payload: RunCheckRequest, db: Session = Depends(get_db)):
 
     db_url = f"postgresql://{conn.user}:{conn.password}@{conn.host}:{conn.port}/{conn.dbname}"
 
+    # === Работа с таблицей check_table ===
+    source_table = payload.table_params.get("source_table")
+    if not source_table:
+        raise HTTPException(status_code=400, detail="Не указана проверяемая таблица")
+
+    check_table = db.query(CheckTable).filter_by(table_name=source_table).first()
+    if not check_table:
+        # создаём новую запись
+        check_table = CheckTable(
+            table_name=source_table,
+            last_validation_date=datetime.utcnow()
+        )
+        db.add(check_table)
+        db.commit()
+        db.refresh(check_table)
+    else:
+        # обновляем дату последней проверки
+        check_table.last_validation_date = datetime.utcnow()
+        db.commit()
+
+    # === Создаём запись результата ===
+    result = ValidationResult(
+        rule_id=rule.rule_id,
+        table_id=check_table.table_id,
+        status=False,
+        error_count=0,
+        check_date=datetime.utcnow(),
+        tables_used=list(payload.table_params.values()),
+        error_log=""
+    )
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+
+    # === Отправляем запрос в Airflow ===
+    dag_id = rule.rule_name
+    dag_run_id = f"{dag_id}__{datetime.utcnow().isoformat()}"
+    airflow_url = f"http://airflow-web:8080/api/v1/dags/{dag_id}/dagRuns"
+
     dag_conf = {
-        "connection_name": conn.name,
         "db_url": db_url,
-        **payload.table_params
+        "rule_name": rule.rule_name,
+        "table_params": payload.table_params,
+        "result_id": result.result_id
     }
 
-    airflow_url = f"http://airflow-web:8080/api/v1/dags/{payload.rule_name}/dagRuns"
-    dag_run_id = f"{payload.rule_name}__{datetime.utcnow().isoformat()}"
-
-    response = requests.post(
-        airflow_url,
-        auth=("airflow", "airflow"),
-        json={
-            "dag_run_id": dag_run_id,
-            "conf": dag_conf
-        },
-        timeout=10
-    )
+    try:
+        response = requests.post(
+            airflow_url,
+            auth=("airflow", "airflow"),
+            json={"dag_run_id": dag_run_id, "conf": dag_conf}
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка соединения с Airflow: {e}")
 
     if response.status_code != 200:
-        raise HTTPException(status_code=500, detail=f"Airflow error: {response.text}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка Airflow ({response.status_code}): {response.text}"
+        )
 
     return {
+        "dag_id": dag_id,
         "dag_run_id": dag_run_id,
-        "dag_id": payload.rule_name,
+        "result_id": result.result_id,
         "status": "triggered"
     }
 
-@router.get("/report/last")
-def get_last_csv_report():
-    folder = "/opt/airflow/reports"
-    files = glob.glob(f"{folder}/*.csv")
 
-    if not files:
-        raise HTTPException(status_code=404, detail="Нет отчетов")
-
-    latest_file = max(files, key=os.path.getctime)
-    try:
-        df = pd.read_csv(latest_file)
-        return {
-            "filename": os.path.basename(latest_file),
-            "rows": df.to_dict(orient="records")
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка чтения отчета: {e}")
 
 @router.get("/dag_status")
 def get_dag_status(
@@ -117,6 +148,28 @@ def get_dag_status(
     except Exception as e:
         return {"state": "error", "message": f"Ошибка: {str(e)}"}
     
+@router.get("/report/by_run")
+def get_report_by_dag_run(dag_id: str = Query(...), dag_run_id: str = Query(...), db: Session = Depends(get_db)):
+    result = db.query(ValidationResult).order_by(ValidationResult.check_date.desc()).first()
+    if not result:
+        raise HTTPException(status_code=404, detail="Результат не найден")
+
+    errors = db.query(ValidationError).filter_by(result_id=result.result_id).all()
+
+    return {
+        "result_id": result.result_id,
+        "error_count": result.error_count,
+        "table": result.tables_used[0] if result.tables_used else "",
+        "rows": [  # преобразуем ошибки
+            {
+                "table_name": e.table_name,
+                "rule_name": e.rule_name,
+                "record_reference": e.record_reference,
+                "error_description": e.error_description
+            } for e in errors
+        ]
+    }
+
 
 @router.get("/connections/test")
 def test_connection_route(
@@ -270,39 +323,69 @@ AIRFLOW_DAG_ID = "export_results_by_period"
 AIRFLOW_USERNAME = "airflow"
 AIRFLOW_PASSWORD = "airflow"
 
+@router.get("/available_rules")
+def get_available_rules(start_date: str, end_date: str, db: Session = Depends(get_db)):
+    rules = db.query(ValidationRule.rule_name)\
+        .join(ValidationResult, ValidationRule.rule_id == ValidationResult.rule_id)\
+        .filter(ValidationResult.check_date.between(start_date, end_date))\
+        .distinct().all()
+    return [r[0] for r in rules]
+
 @router.post("/export/period")
-def trigger_export_by_period(start_date: str, end_date: str):
-    url = f"{AIRFLOW_BASE_URL}/api/v1/dags/{AIRFLOW_DAG_ID}/dagRuns"
+def trigger_export_by_period(
+    start_date: str = Body(...),
+    end_date: str = Body(...),
+    rule_names: list[str] = Body(default=[])
+):
+    dag_id = "export_results_by_period"
+    dag_run_id = f"{dag_id}__{datetime.utcnow().isoformat()}"
+
     payload = {
+        "dag_run_id": dag_run_id,
         "conf": {
             "start_date": start_date,
-            "end_date": end_date
+            "end_date": end_date,
+            "rule_names": rule_names
         }
     }
 
-    response = requests.post(url, auth=(AIRFLOW_USERNAME, AIRFLOW_PASSWORD), json=payload)
+    response = requests.post(
+        f"http://airflow-web:8080/api/v1/dags/{dag_id}/dagRuns",
+        auth=("airflow", "airflow"),
+        json=payload
+    )
 
-    if response.status_code == status.HTTP_200_OK:
-        return {"message": "Экспорт запущен успешно"}
-    else:
+    if response.status_code == 200:
+        filename = f"results_{start_date}_to_{end_date}.xlsx"  # базовое имя для фронта
         return {
-            "message": "Ошибка запуска DAG",
-            "status": response.status_code,
-            "details": response.json()
+            "message": "Экспорт запущен",
+            "filename": filename
         }
+
     
 AIRFLOW_API_URL = "http://airflow-web:8080/api/v1/dags/export_result_to_excel/dagRuns"
 
 @router.post("/export/result/")
-def export_result_to_excel(result_id: int):
+def export_result_to_excel(request: ExportRequest = Body(...), db: Session = Depends(get_db)):
+    result_id = request.result_id
+    conn = db.query(DBConnection).first()
+    if not conn:
+        raise HTTPException(status_code=404, detail="Нет подключения по умолчанию")
+
+    db_url = f"postgresql://{conn.user}:{conn.password}@{conn.host}:{conn.port}/{conn.dbname}"
+    dag_run_id = f"export_result__{datetime.utcnow().isoformat()}"
+
     response = requests.post(
         AIRFLOW_API_URL,
-        json={"conf": {"result_id": result_id}},
-        auth=("airflow", "airflow") 
+        auth=(AIRFLOW_USERNAME, AIRFLOW_PASSWORD),
+        json={"dag_run_id": dag_run_id, "conf": {"result_id": result_id, "db_url": db_url}}
     )
+
     if response.status_code != 200:
         raise HTTPException(status_code=500, detail=f"Ошибка запуска DAG: {response.text}")
-    return {"detail": "Экспорт запущен", "dag_run_id": response.json().get("dag_run_id")}
+    return {"dag_run_id": dag_run_id}
+
+
 
 @router.get("/export/result/download/{result_id}")
 def download_result_excel(result_id: int):
@@ -310,3 +393,45 @@ def download_result_excel(result_id: int):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Файл еще не создан или не найден")
     return FileResponse(path=file_path, filename=f"report_result_{result_id}.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+@router.get("/report/result/{result_id}")
+def get_report_from_db(result_id: int, db: Session = Depends(get_db)):
+    result = db.query(ValidationResult).filter_by(result_id=result_id).first()
+    if not result:
+        raise HTTPException(status_code=404, detail="Результат не найден")
+
+    errors = db.query(ValidationError).filter_by(result_id=result_id).all()
+    return {
+        "error_count": result.error_count,
+        "status": result.status,
+        "table": result.tables_used[0] if result.tables_used else "",
+        "rows": [
+            {
+                "table_name": err.table_name,
+                "rule_name": err.rule_name,
+                "record_reference": err.record_reference,
+                "error_description": err.error_description
+            } for err in errors
+        ]
+    }
+
+@router.get("/export/period/download")
+def download_exported_report(start_date: str = Query(...), end_date: str = Query(...)):
+    from glob import glob
+
+    report_dir = "/opt/airflow/reports"
+    pattern = f"{report_dir}/results_{start_date}_to_{end_date}_*.xlsx"
+    matches = sorted(glob(pattern), key=os.path.getmtime, reverse=True)
+
+    if not matches:
+        raise HTTPException(status_code=404, detail="Файл еще не создан или не найден")
+
+    file_path = matches[0]
+    if os.path.getsize(file_path) < 1024:
+        raise HTTPException(status_code=404, detail="Файл еще создается")
+
+    return FileResponse(
+        path=file_path,
+        filename=os.path.basename(file_path),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )

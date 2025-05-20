@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS validation.validation_error (
     error_description TEXT
 );
 
-
+-- Подлкючния к бд для проверок
 CREATE TABLE IF NOT EXISTS validation.db_connection (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL UNIQUE,
@@ -50,5 +50,3 @@ CREATE TABLE IF NOT EXISTS validation.db_connection (
     user VARCHAR NOT NULL,
     password VARCHAR NOT NULL
 );
-
-

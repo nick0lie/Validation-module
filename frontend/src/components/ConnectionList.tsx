@@ -9,11 +9,7 @@ type Connection = {
   user: string;
 };
 
-function ConnectionList({
-  onEdit,
-}: {
-  onEdit: (conn: Connection) => void;
-}) {
+function ConnectionList({ onEdit }: { onEdit: (conn: Connection) => void }) {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [message, setMessage] = useState("");
 
@@ -54,19 +50,70 @@ function ConnectionList({
 
   return (
     <div style={{ marginBottom: "20px" }}>
-      <h3>Сохранённые подключения</h3>
       {connections.length === 0 && <p>Нет подключений</p>}
-      <ul>
+      <ul style={{ listStyle: "none", padding: 0 }}>
         {connections.map((conn) => (
-          <li key={conn.id}>
-            <strong>{conn.name}</strong> ({conn.host}:{conn.port}/{conn.dbname}){" "}
-            <button onClick={() => onEdit(conn)}>✏️</button>{" "}
-            <button onClick={() => deleteConnection(conn.id)}>🗑</button>{" "}
-            <button onClick={() => handleGoToChecks(conn.name)}>🔍 Проверки</button>
+          <li
+            key={conn.id}
+            style={{
+              marginBottom: "1rem",
+              padding: "1rem",
+              backgroundColor: "#f0f4f8",
+              borderRadius: "6px",
+              boxShadow: "0 0 4px rgba(0,0,0,0.1)",
+            }}
+          >
+            <div style={{ marginBottom: "0.5rem" }}>
+              <strong>{conn.name}</strong> ({conn.host}:{conn.port}/{conn.dbname})
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button
+                onClick={() => onEdit(conn)}
+                style={{
+                  padding: "0.4rem 0.8rem",
+                  fontSize: "0.9rem",
+                  backgroundColor: "#2196F3",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                ✏️ Редактировать
+              </button>
+              <button
+                onClick={() => deleteConnection(conn.id)}
+                style={{
+                  padding: "0.4rem 0.8rem",
+                  fontSize: "0.9rem",
+                  backgroundColor: "#f44336",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                🗑 Удалить
+              </button>
+              <button
+                onClick={() => handleGoToChecks(conn.name)}
+                style={{
+                  padding: "0.4rem 0.8rem",
+                  fontSize: "0.9rem",
+                  backgroundColor: "#4CAF50",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                🔍 Проверки
+              </button>
+            </div>
           </li>
         ))}
       </ul>
-      <div style={{ color: "red" }}>{message}</div>
+      {message && <div style={{ color: "red" }}>{message}</div>}
     </div>
   );
 }

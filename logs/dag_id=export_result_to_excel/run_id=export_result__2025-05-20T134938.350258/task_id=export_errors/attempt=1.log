@@ -1,0 +1,21 @@
+[2025-05-20T13:49:39.861+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-05-20T13:49:39.879+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: export_result_to_excel.export_errors export_result__2025-05-20T13:49:38.350258 [queued]>
+[2025-05-20T13:49:39.984+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: export_result_to_excel.export_errors export_result__2025-05-20T13:49:38.350258 [queued]>
+[2025-05-20T13:49:39.984+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-05-20T13:49:39.998+0000] {taskinstance.py:2330} INFO - Executing <Task(PythonOperator): export_errors> on 2025-05-20 13:49:38.362774+00:00
+[2025-05-20T13:49:40.002+0000] {warnings.py:112} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62: DeprecationWarning: This process (pid=73) is multi-threaded, use of fork() may lead to deadlocks in the child.
+  pid = os.fork()
+
+[2025-05-20T13:49:40.003+0000] {standard_task_runner.py:64} INFO - Started process 75 to run task
+[2025-05-20T13:49:40.004+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'export_result_to_excel', 'export_errors', 'export_result__2025-05-20T13:49:38.350258', '--job-id', '14', '--raw', '--subdir', 'DAGS_FOLDER/report_to_excel.py', '--cfg-path', '/tmp/tmppf7p6dk3']
+[2025-05-20T13:49:40.006+0000] {standard_task_runner.py:91} INFO - Job 14: Subtask export_errors
+[2025-05-20T13:49:40.045+0000] {task_command.py:426} INFO - Running <TaskInstance: export_result_to_excel.export_errors export_result__2025-05-20T13:49:38.350258 [running]> on host e153ee340532
+[2025-05-20T13:49:40.129+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='export_result_to_excel' AIRFLOW_CTX_TASK_ID='export_errors' AIRFLOW_CTX_EXECUTION_DATE='2025-05-20T13:49:38.362774+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='export_result__2025-05-20T13:49:38.350258'
+[2025-05-20T13:49:40.130+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-05-20T13:49:40.252+0000] {logging_mixin.py:188} INFO - Файл сохранён: /opt/***/reports/report_result_10.xlsx
+[2025-05-20T13:49:40.253+0000] {python.py:237} INFO - Done. Returned value was: None
+[2025-05-20T13:49:40.253+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-05-20T13:49:40.260+0000] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=export_result_to_excel, task_id=export_errors, run_id=export_result__2025-05-20T13:49:38.350258, execution_date=20250520T134938, start_date=20250520T134939, end_date=20250520T134940
+[2025-05-20T13:49:40.297+0000] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-05-20T13:49:40.309+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-05-20T13:49:40.313+0000] {local_task_job_runner.py:222} INFO - ::endgroup::
